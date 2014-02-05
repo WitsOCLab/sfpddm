@@ -17,9 +17,7 @@ You should have received a copy of the GNU General Public License along
 with the SFPddm library. If not, see http://www.gnu.org/licenses/.
 
 */
-#include "Arduino.h"
 #include <SFPddm.h>
-#include "I2C.h"
 
 // Creating an object of SFP DDM library
 SFPddm sfp;
@@ -98,6 +96,7 @@ void loop(){
     else{
       Serial.print("Error! Check if SFP is present.");
       //restart
+      delay(100);
       setup();   
     }
   }

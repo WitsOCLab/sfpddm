@@ -24,7 +24,18 @@ with the SFPddm library. If not, see http://www.gnu.org/licenses/.
 #ifndef SFPddm_h
 #define SFPddm_h
 
+#if defined(ENERGIA) // LaunchPad, FraunchPad and StellarPad specific
+#include "Energia.h"
+#elif defined(WIRING) // Wiring specific
+#include "Wiring.h"
+#elif defined(ARDUINO) && (ARDUINO >= 100) // Arduino 1.0x and 1.5x specific
 #include "Arduino.h"
+#elif defined(ARDUINO) && (ARDUINO < 100)  // Arduino 23 specific
+#include "WProgram.h"
+#endif // end IDE
+
+#include "Wire.h"
+
 
 // library interface description
 class SFPddm
@@ -51,10 +62,12 @@ class SFPddm
   // library-accessible "private" interface
   private:
     void getCalibrationData();
+    uint8_t I2Cread(uint8_t address, uint8_t registerAddress, uint8_t numberBytes, uint8_t *dataBuffer);
+    uint8_t I2Cwrite(uint8_t address, uint8_t registerAddress, uint8_t data);
+    uint8_t I2Cwrite(uint8_t address, uint8_t registerAddress);
     uint16_t calibrateMeasurement(uint16_t rawdata, uint16_t slope, int16_t offset);
     int16_t calibrateTemperature(int16_t rawdata, uint16_t slope, int16_t offset);
     uint16_t calibrateRXpower(uint16_t rawdata, float *calibrationRX);
 };
 
 #endif
-

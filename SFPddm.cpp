@@ -23,10 +23,7 @@ with the SFPddm library. If not, see http://www.gnu.org/licenses/.
 
 // Includes
 
-#include "Arduino.h"
 #include "SFPddm.h"
-#include "inttypes.h"
-#include "I2C.h"
 
 // Definitions
 
@@ -34,7 +31,7 @@ with the SFPddm library. If not, see http://www.gnu.org/licenses/.
 #define DDMADDR     0x51 // addr A2/3
 
 // Uncomment if HW SFP connections are present for Enhanced options
-#define HWSFP
+//#define HWSFP
 
 #ifdef HWSFP
 // Hardware SFP connections
@@ -107,11 +104,8 @@ SFPddm::SFPddm()
 
 // The function initializes the communication, checks if the module is present, retrieves necessary information
 uint8_t SFPddm::begin(void){
-  I2c.begin();
-  I2c.pullup(true);
-  I2c.setSpeed(1); //400kHz
-  //I2c.timeOut(500); //500ms timeout
-  
+  Wire.begin();
+
   //reset error
   error=0x00;
   
@@ -131,15 +125,15 @@ uint8_t SFPddm::begin(void){
   #endif
   
   // test device communication and read modes
-  error|=I2c.read(INFOADDR,92, 1,&supported);
+  error|=I2Cread(INFOADDR,92, 1,&supported);
+  error|=I2Cread(INFOADDR,93, 1,&ddmmodes); 
   // stop if not present
   if(error){
     return error;
   }
+  
   // if DDM mode is supported and externally callibrated
-  if(supported&0x40){
-    // check which DDM modes are supported
-    error|=I2c.read(INFOADDR,93, 1,&ddmmodes); 
+  if(supported&0x10){ 
     getCalibrationData();
   }
   
@@ -156,7 +150,7 @@ void SFPddm::getRawInfo(uint8_t addr, uint8_t *data){
 // Can be used to check if the module is present
 uint8_t SFPddm::getStatus(){
   // Do a test write to register pointer.
-  error|=I2c.write(INFOADDR, 0x00);
+  error|=I2Cwrite(INFOADDR, 0x00);
   return error;
 }
 
@@ -174,7 +168,7 @@ uint8_t SFPddm::getDDMmodes(){
 uint8_t SFPddm::readMeasurements(){
   int i;
   //read diagnostic measurements registers 96-105 of 0xA2, store them in buffer
-  error|=I2c.read(DDMADDR, 96, 22, (byte*)&raw_buffer);
+  error|=I2Cread(DDMADDR, 96, 22, (byte*)&raw_buffer);
   
   //copy raw measurements to results union
   uint8_t *p_meas = (uint8_t*)&measdata;
@@ -223,7 +217,7 @@ void SFPddm::setControl(uint8_t data){
   // Software control
   #ifndef HWSFP
   //write the byte (not all bits are writable!)
-  error|=I2c.write(DDMADDR,110, 0x40);
+  error|=I2Cwrite(DDMADDR,110,data);
   #endif
   
   // Hardware control if enabled
@@ -278,7 +272,7 @@ void SFPddm::getCalibrationData(){
   uint8_t calData[36];
   
   //read data
-  error|=I2c.read(DDMADDR, 56, 36, &calData[0]);
+  error|=I2Cread(DDMADDR, 56, 36, &calData[0]);
   //loop variable
   int i;
   
@@ -344,3 +338,40 @@ uint16_t SFPddm::calibrateRXpower(uint16_t rawdata, float *calibrationRX)
 
   return (int16_t)temporary;
 }
+
+// I2C wrapper functions to support standard wiring library
+uint8_t SFPddm::I2Cread(uint8_t address, uint8_t registerAddress, uint8_t numberBytes, uint8_t *dataBuffer){
+	Wire.beginTransmission(address);
+    Wire.write(registerAddress);
+    Wire.endTransmission();
+    uint8_t receivedBytes = Wire.requestFrom(address,(uint8_t) numberBytes);    // need to cast int to avoid compiler warnings
+    
+	uint8_t *ptr = (uint8_t *) dataBuffer;
+  	while(Wire.available()){
+  		*ptr++ = Wire.read();
+  	}
+  	
+  	//checking for status of the transmission
+  	if(receivedBytes==numberBytes){
+  		return 0x00;
+  	}
+  	else{
+  		return 0x00;
+  	}
+}
+
+uint8_t SFPddm::I2Cwrite(uint8_t address, uint8_t registerAddress, uint8_t data)
+{
+    Wire.beginTransmission(address);
+    Wire.write(registerAddress);
+    Wire.write(data);
+    return Wire.endTransmission(); // returns 0 of communication ok
+}
+
+uint8_t SFPddm::I2Cwrite(uint8_t address, uint8_t registerAddress)
+{
+    Wire.beginTransmission(address);
+    Wire.write(registerAddress);
+    return Wire.endTransmission(); // returns 0 of communication ok
+}
+
