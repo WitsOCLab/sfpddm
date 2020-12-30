@@ -3,6 +3,11 @@ sfpddm
 
 Arduino library for interfacing SFP modules and reading DDM information as per SFF-8472. The library is following the standard but is not yet fully compliant, some additional rarely used functions need to be implemented for that.
 
+Changelog
+---------
+
+* [Mitchell A. Cox] Updated to use SoftwareI2C rather than Wire so that it's easy to have multiple SFPs.
+
 
 How it works
 ------------
